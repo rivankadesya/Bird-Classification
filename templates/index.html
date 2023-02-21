@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+  <head>
+    <title>VGG16 Image Classifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+          }
+          h1 {
+            margin-top: 0;
+            color: #333;
+          }
+          form {
+            margin: 50px auto;
+            max-width: 600px;
+            text-align: center;
+          }
+          .input-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            margin-top: 20px;
+          }
+          label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+          }
+          input[type="file"] {
+            display: block;
+            margin: 20px auto;
+          }
+          textarea {
+            display: block;
+            margin: 20px auto;
+            width: 100%;
+            height: 200px;
+            resize: vertical;
+          }
+          button[type="submit"] {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+          }
+          .preview {
+            margin: auto;
+            max-width: 40px;
+          }
+          .result {
+            margin: 20px auto;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+          }
+    </style>
+  </head>
+  <body>
+    <form id="upload-form" method="post" action="/predict">
+      <h1>VGG16 Image Classifier</h1>
+      <div>
+        <label>
+          <input type="radio" name="source" value="file" checked>
+          Upload Image File
+        </label>
+        <label>
+          <input type="radio" name="source" value="base64">
+          Paste Base64 Encoded Image String
+        </label>
+      </div>
+      <input type="file" id="image-file" name="image" accept="image/*" required>
+      <div id="base64-input" style="display: none;">
+        <textarea id="image-base64" name="image" rows="10"></textarea>
+      </div>
+      <button type="submit">Predict</button>
+    </form>
+    <div class="result" id="result"></div>
+    <div class="preview" id="image-preview"></div>
+    
+    <script>
+      const sourceFile = document.querySelector('input[value="file"]');
+      const sourceBase64 = document.querySelector('input[value="base64"]');
+      const fileInput = document.querySelector('#image-file');
+      const base64Input = document.querySelector('#image-base64');
+      const preview = document.querySelector('#image-preview');
+      const result = document.querySelector('#result');
+      const form = document.querySelector('#upload-form');
+
+      sourceFile.addEventListener('change', (event) => {
+        base64Input.style.display = 'none';
+        fileInput.style.display = 'block';
+      });
+
+      sourceBase64.addEventListener('change', (event) => {
+        fileInput.style.display = 'none';
+        base64Input.style.display = 'block';
+      });
+
+      fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = document.createElement('img');
+          img.src = event.target.result;
+          preview.innerHTML = '';
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const source = document.querySelector('input[name="source"]:checked').value;
+        if (source === 'file') {
+          const formData = new FormData(form);
+          fetch('/predict', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+              result.textContent = `Predicted Class: ${data.predicted}`;
+            });
+        } else {
+          const base64 = base64Input.value;
+          fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `source=base64&image=${encodeURIComponent(base64)}`
+          })
+          .then(response => response.json())
+          .then(data => {
+            result.textContent = `Predicted Class: ${data.predicted}`;
+          });
+      }
+    });
+    </script>
+  </body>
+</html>
